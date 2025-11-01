@@ -191,15 +191,16 @@ def black_update(
 
     print()
 
+    # Lower left update
     w[2 : n - 1 : 2, 1 : m - 1 : 2] = (
         rhs[1:k:2, 0:d:2]
         - Ip[1:k:2, 0:d:2] * Iw[1:k:2, 0:d:2] * p[2 : n - 1 : 2, 1 : m - 1 : 2]
         + lam
         / h**2
         * (
-            # LHS
+            # Left
             w[2 : n - 1 : 2, 0 : m - 2 : 2]
-            # RHS
+            # Right
             + w[2 : n - 1 : 2, 2:m:2]
             # Up
             + w[1 : n - 2 : 2, 1 : m - 1 : 2]
@@ -218,16 +219,16 @@ def black_update(
     print("Down:")
     print(w[2:n:2, 2 : m - 1 : 2])
 
-    # Side update
+    # Upper right update
     w[1 : n - 1 : 2, 2 : m - 1 : 2] = (
         rhs[0:k:2, 1:d:2]
         - Ip[0:k:2, 1:d:2] * Iw[0:k:2, 1:d:2] * p[1 : n - 1 : 2, 2 : m - 1 : 2]
         + lam
         / h**2
         * (
-            # LHS
+            # Left
             w[1 : n - 1 : 2, 1 : m - 2 : 2]
-            # RHS
+            # Right
             + w[1 : n - 1 : 2, 3:m:2]
             # Up
             + w[0 : n - 2 : 2, 2 : m - 1 : 2]
@@ -276,16 +277,16 @@ def red_update(
     n, m = w.shape
     k, d = Iw.shape
 
-    # Lower update
+    # Corner update
     w[1 : n - 1 : 2, 1 : m - 1 : 2] = (
         rhs[0:k:2, 0:d:2]
         - Ip[0:k:2, 0:d:2] * Iw[0:k:2, 0:d:2] * p[1 : n - 1 : 2, 1 : m - 1 : 2]
         + lam
         / h**2
         * (
-            # LHS
+            # Left
             w[1 : n - 1 : 2, 0 : m - 2 : 2]
-            # RHS
+            # Right
             + w[1 : n - 1 : 2, 2:m:2]
             # Up
             + w[0 : n - 2 : 2, 1 : m - 1 : 2]
@@ -294,16 +295,16 @@ def red_update(
         )
     ) / (Ip[0:k:2, 0:d:2] ** 2 + 4 * lam)
 
-    # Side update
+    # Interior corner update
     w[2 : n - 1 : 2, 2 : m - 1 : 2] = (
         rhs[1:k:2, 1:d:2]
         - Ip[1:k:2, 1:d:2] * Iw[1:k:2, 1:d:2] * p[2 : n - 1 : 2, 2 : m - 1 : 2]
         + lam
         / h**2
         * (
-            # LHS
+            # Left
             w[2 : n - 1 : 2, 1 : m - 2 : 2]
-            # RHS
+            # Right
             + w[2 : n - 1 : 2, 3:m:2]
             # Up
             + w[1 : n - 2 : 2, 2 : m - 1 : 2]
@@ -443,7 +444,7 @@ def restriction(
 
 def prolongation(eu_2h: np.ndarray, ev_2h: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """
-    Prolongation of error on coarse grid
+    Prolongation of error of coarse grid onto a fine grid
 
     Args:
     ---
@@ -455,9 +456,99 @@ def prolongation(eu_2h: np.ndarray, ev_2h: np.ndarray) -> tuple[np.ndarray, np.n
     Returns:
     ---
     tuple[np.ndarray, np.ndarray]
-        Prolongated eu_2h, ev_2h
+        Prolongated eu_2h, ev_2h to e_h
     """
-    pass
+    assert eu_2h.shape == ev_2h.shape
+
+    eu_h = interpolate(eu_2h)
+    ev_h = interpolate(ev_2h)
+
+    return eu_h, ev_h
+
+
+def interpolate(e_2h: np.ndarray) -> np.ndarray:
+    """
+    Interpolation of error of coarse grid onto a fine grid
+
+    Args:
+    ---
+    e_2h : np.ndarray
+        Residual to interpolate
+
+    Returns:
+    ---
+    np.ndarray
+        Interpolated e_2h to e_h
+    """
+    n, m = e_2h.shape
+
+    e_h = np.zeros((2 * n, 2 * m))
+    k, d = e_h.shape
+
+    # ---
+    # Inner points
+    # ---
+
+    # Upper left
+    e_h[1 : k - 1 : 2, 1 : d - 1 : 2] = (
+        9 * e_2h[0 : n - 1, 0 : m - 1]  # Upper left
+        + 3 * e_2h[0 : n - 1, 1:m]  # Upper right
+        + 3 * e_2h[1:n, 0 : m - 1]  # Lower left
+        + e_2h[1:n, 1:m]  # Lower right
+    ) / 16
+
+    # Upper right
+    e_h[1 : k - 1 : 2, 2 : d - 1 : 2] = (
+        3 * e_2h[0 : n - 1, 0 : m - 1]  # Upper left
+        + 9 * e_2h[0 : n - 1, 1:m]  # Upper right
+        + 1 * e_2h[1:n, 0 : m - 1]  # Lower left
+        + 3 * e_2h[1:n, 1:m]  # Lower right
+    ) / 16
+
+    # Lower left
+    e_h[2 : k - 1 : 2, 1 : d - 1 : 2] = (
+        3 * e_2h[0 : n - 1, 0 : m - 1]  # Upper left
+        + 1 * e_2h[0 : n - 1, 1:m]  # Upper right
+        + 9 * e_2h[1:n, 0 : m - 1]  # Lower left
+        + 3 * e_2h[1:n, 1:m]  # Lower right
+    ) / 16
+
+    # Lower right
+    e_h[2 : k - 1 : 2, 2 : d - 1 : 2] = (
+        1 * e_2h[0 : n - 1, 0 : m - 1]  # Upper left
+        + 3 * e_2h[0 : n - 1, 1:m]  # Upper right
+        + 3 * e_2h[1:n, 0 : m - 1]  # Lower left
+        + 9 * e_2h[1:n, 1:m]  # Lower right
+    ) / 16
+
+    # ---
+    # {Edges} \ {Vertices}
+    # ---
+    # Left edge
+    e_h[1 : k - 2 : 2, 0] = (3 * e_2h[0 : n - 1, 0] + e_2h[1:n, 0]) / 4  # Upper
+    e_h[2 : k - 1 : 2, 0] = (e_2h[0 : n - 1, 0] + 3 * e_2h[1:n, 0]) / 4  # Lower
+
+    # Right edge
+    e_h[1 : k - 2 : 2, -1] = (3 * e_2h[0 : n - 1, -1] + e_2h[1:n, -1]) / 4  # Upper
+    e_h[2 : k - 1 : 2, -1] = (e_2h[0 : n - 1, -1] + 3 * e_2h[1:n, -1]) / 4  # Lower
+
+    # Upper edge
+    e_h[0, 1 : d - 2 : 2] = (3 * e_2h[0, 0 : m - 1] + e_2h[0, 1:m]) / 4  # Left
+    e_h[0, 2 : d - 1 : 2] = (e_2h[0, 0 : m - 1] + 3 * e_2h[0, 1:m]) / 4  # Right
+
+    # Lower edge
+    e_h[-1, 1 : d - 2 : 2] = (3 * e_2h[-1, 0 : m - 1] + e_2h[-1, 1:m]) / 4  # Left
+    e_h[-1, 2 : d - 1 : 2] = (e_2h[-1, 0 : m - 1] + 3 * e_2h[-1, 1:m]) / 4  # Right
+
+    # ---
+    # Vertices
+    # ---
+    e_h[0, 0] = e_2h[0, 0]  # Upper left
+    e_h[0, -1] = e_2h[0, -1]  # Upper right
+    e_h[-1, 0] = e_2h[-1, 0]  # Lower left
+    e_h[-1, -1] = e_2h[-1, -1]  # Lower right
+
+    return e_h
 
 
 if __name__ == "__main__":
