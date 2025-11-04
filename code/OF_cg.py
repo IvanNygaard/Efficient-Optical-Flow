@@ -15,6 +15,7 @@ def OF_cg(
     rhsv: np.ndarray,
     tol=1.0e-8,
     maxit=2000,
+    level: int = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     The CG method for the optical flow problem.
@@ -42,24 +43,30 @@ def OF_cg(
 
     # Dimensions, step-size, constants for diagonal (k1) and off-diagonal (k2) elements and cross derivatives
     n, m = Ix.shape
-    n = n - 2
-    m = m - 2
-    h = 1
+    # n = n - 2
+    # m = m - 2
+    h = level
     k1 = (4 * reg) / (h * h)
     k2 = -reg / (h * h)
 
     # Note: Implicitly imposing Dirichlet B.C. by only acting on interior nodes (n-2, m-2) and settung u0 = v0 = 0
-    Ix = Ix[1:-1, 1:-1]
-    Iy = Iy[1:-1, 1:-1]
+    # Ix = Ix[1:-1, 1:-1]
+    # Iy = Iy[1:-1, 1:-1]
     Ixy = Ix * Iy
-    rhsu = rhsu[1:-1, 1:-1]
-    rhsv = rhsv[1:-1, 1:-1]
+    # rhsu = rhsu[1:-1, 1:-1]
+    # rhsv = rhsv[1:-1, 1:-1]
 
     # Initialize x and b with row-wise numbering
     u = u0
     v = v0
+    print("u: ", u.shape)
+    print("v: ", v.shape)
+    print("rhsu: ", rhsu.shape)
+    print("rhsv: ", rhsv.shape)
     x = np.hstack((u.ravel(order="C"), v.ravel(order="C")))
     b = np.hstack((rhsu.ravel(order="C"), rhsv.ravel(order="C")))
+    print("x: ", x.shape)
+    print("b: ", b.shape)
 
     # 1D Laplacian
     Lx = sp.diags([k2, k1, k2], [-1, 0, 1], shape=(m, m))
@@ -84,6 +91,7 @@ def OF_cg(
     A_21 = A_12.copy()
 
     A = sp.block_array([[A_11, A_12], [A_21, A_22]])
+    print(A)
 
     # plt.spy(A_11, markersize=0.8, color = "black")
     # plt.show()
