@@ -1,7 +1,7 @@
 # Imports
-import matplotlib.pyplot as plt
 import scipy.sparse as sp
 import numpy as np
+from utils import norm, F
 
 
 # CG-function.
@@ -59,14 +59,8 @@ def OF_cg(
     # Initialize x and b with row-wise numbering
     u = u0
     v = v0
-    print("u: ", u.shape)
-    print("v: ", v.shape)
-    print("rhsu: ", rhsu.shape)
-    print("rhsv: ", rhsv.shape)
     x = np.hstack((u.ravel(order="C"), v.ravel(order="C")))
     b = np.hstack((rhsu.ravel(order="C"), rhsv.ravel(order="C")))
-    print("x: ", x.shape)
-    print("b: ", b.shape)
 
     # 1D Laplacian
     Lx = sp.diags([k2, k1, k2], [-1, 0, 1], shape=(m, m))
@@ -91,7 +85,6 @@ def OF_cg(
     A_21 = A_12.copy()
 
     A = sp.block_array([[A_11, A_12], [A_21, A_22]])
-    print(A)
 
     # plt.spy(A_11, markersize=0.8, color = "black")
     # plt.show()
@@ -122,5 +115,98 @@ def OF_cg(
     u = x[: (n * m)].reshape((n, m))
     v = x[(n * m) :].reshape((n, m))
     # print(np.max(Ix**2), 4*reg/(h*h))
+
+    return u, v
+
+
+def cg(
+    u0: np.ndarray,
+    v0: np.ndarray,
+    Ix: np.ndarray,
+    Iy: np.ndarray,
+    lam: float,
+    rhs_u: np.ndarray,
+    rhs_v: np.ndarray,
+    tol=1.0e-8,
+    maxitr=2000,
+    h: int = 1,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    The CG method for the optical flow problem.
+
+    Args:
+    ---
+    u0 : np.ndarray
+        initial guess for u
+    v0 : np.ndarray
+        initial guess for v
+    Ix : np.ndarray
+        x-derivative of the first frame
+    Iy : np.ndarray
+        y-derivative of the first frame
+    lam : float
+        regularisation parameter lambda
+    rhs_u : np.ndarray
+        right-hand side in the equation for u
+    rhs_v : np.ndarray
+        right-hand side in the equation for v
+    tol : np.ndarray, default=1e-8
+        relative residual tolerance
+    maxitr : np.ndarray, default=2000
+        maximum number of iterations
+    h : int, default= 1
+        Steplength
+
+    Returns:
+    ---
+     tuple[np.ndarray, np.ndarray]
+        Numerical solution for u, v
+    """
+    # Initialize
+    Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
+
+    # r
+    ru = rhs_u - Fu
+    rv = rhs_v - Fv
+    # x
+    u = u0
+    v = v0
+    # p
+    pu = ru
+    pv = rv
+
+    # Calculate the norm of r
+    rr0 = norm(ru, rv) ** 2
+    rk1_rk1 = rr0
+
+    assert ru.shape == rv.shape
+
+    it = 0
+    while it < maxitr:
+        it += 1
+
+        # Calculate alpha
+        rk_rk = rk1_rk1
+        Fpu, Fpv = F(pu, pv, Ix, Iy, lam, h)
+        pAp = np.sum(Fpu * pu) + np.sum(Fpv * pv)
+
+        alpha = rk_rk / pAp
+
+        u = u + alpha * pu
+        v = v + alpha * pv
+
+        ru = ru - alpha * Fpu
+        rv = rv - alpha * Fpv
+
+        # Break condition
+        rk1_rk1 = norm(ru, rv) ** 2
+        # 'tol' raised to power of 2 as we are dealing with norm squared
+        if rk1_rk1 / rr0 < tol**2:
+            break
+
+        beta = rk1_rk1 / rk_rk
+
+        pu = ru + beta * pu
+        pv = rv + beta * pv
 
     return u, v

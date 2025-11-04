@@ -1,6 +1,5 @@
 import numpy as np
-import scipy as sp
-from OF_cg import OF_cg
+from OF_cg import cg
 
 
 def V_cycle(
@@ -56,7 +55,7 @@ def V_cycle(
     ru_h, rv_h = residual(u, v, Ix, Iy, lam, rhs_u, rhs_v, h)
     ru_2h, rv_2h, Ix2h, Iy2h = restriction(ru_h, rv_h, Ix, Iy)
     if level == max_level - 1:
-        eu_2h, ev_2h = OF_cg(
+        eu_2h, ev_2h = cg(
             np.zeros_like(ru_2h),
             np.zeros_like(rv_2h),
             Ix2h,
