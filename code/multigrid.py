@@ -1,5 +1,6 @@
 import numpy as np
 from OF_cg import cg
+from utils import F
 
 
 def V_cycle(
@@ -49,12 +50,12 @@ def V_cycle(
         Numerical solution for u, v
     """
     # Stepsize
-    h = level
+    h = float(level)
 
-    u, v = smoothing(u0, v0, Ix, Iy, lam, rhs_u, rhs_v, level, s1)
+    u, v = smoothing(u0, v0, Ix, Iy, lam, rhs_u, rhs_v, s1, h)
     ru_h, rv_h = residual(u, v, Ix, Iy, lam, rhs_u, rhs_v, h)
     ru_2h, rv_2h, Ix2h, Iy2h = restriction(ru_h, rv_h, Ix, Iy)
-    if level == max_level - 1:
+    if level == max_level:
         eu_2h, ev_2h = cg(
             np.zeros_like(ru_2h),
             np.zeros_like(rv_2h),
@@ -65,7 +66,7 @@ def V_cycle(
             rv_2h,
             1e-8,
             1000,
-            level + 1,
+            2 * h,
         )
     else:
         eu_2h, ev_2h = V_cycle(
@@ -84,7 +85,7 @@ def V_cycle(
     eu_h, ev_h = prolongation(eu_2h, ev_2h)
     u = u + eu_h
     v = v + ev_h
-    u, v = smoothing(u, v, Ix, Iy, lam, rhs_u, rhs_v, h, s2)
+    u, v = smoothing(u, v, Ix, Iy, lam, rhs_u, rhs_v, s2, h)
 
     return u, v
 
@@ -97,8 +98,8 @@ def smoothing(
     lam: float,
     rhsu: np.ndarray,
     rhsv: np.ndarray,
-    s1: int,
-    h: int,
+    iterations: int,
+    h: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Smoothing using Red-Black Gauss-Seidel
@@ -130,7 +131,6 @@ def smoothing(
     tuple[np.ndarray, np.ndarray]
         Smoothed u, v
     """
-    # TEMP
     assert u.shape == v.shape
 
     # Pad u,v with zeros around (Dirichlet BC)
@@ -139,7 +139,7 @@ def smoothing(
 
     n, m = v_pad.shape
 
-    for _ in range(s1):
+    for _ in range(iterations):
         # These two are invariant of each other
         black_update(u_pad, v_pad, Ix, Iy, lam, rhsu, h)
         red_update(v_pad, u_pad, Iy, Ix, lam, rhsv, h)
@@ -147,6 +147,14 @@ def smoothing(
         # These last two depends on the first two
         black_update(v_pad, u_pad, Iy, Ix, lam, rhsv, h)
         red_update(u_pad, v_pad, Ix, Iy, lam, rhsu, h)
+
+        # For symmetric GS
+
+        black_update(v_pad, u_pad, Iy, Ix, lam, rhsv, h)
+        red_update(u_pad, v_pad, Ix, Iy, lam, rhsu, h)
+
+        black_update(u_pad, v_pad, Ix, Iy, lam, rhsu, h)
+        red_update(v_pad, u_pad, Iy, Ix, lam, rhsv, h)
 
     return u_pad[1 : n - 1, 1 : m - 1], v_pad[1 : n - 1, 1 : m - 1]
 
@@ -158,7 +166,7 @@ def black_update(
     Ip: np.ndarray,
     lam: float,
     rhs: np.ndarray,
-    h: int,
+    h: float,
 ) -> None:
     """
     Black update using Red-Black Gauss-Seidel.
@@ -188,20 +196,7 @@ def black_update(
     None
     """
     n, m = w.shape
-    print("n: ")
     k, d = Iw.shape
-    # Lower update
-    # print(w[2 : n - 1 : 2, 1 : m - 1 : 2])
-    # print("LHS:")
-    # print(w[2 : n - 1 : 2, 0 : m - 2 : 2])
-    # print("RHS:")
-    # print(w[2 : n - 1 : 2, 2:m:2])
-    # print("Up:")
-    # print(w[1 : n - 2 : 2, 1 : m - 1 : 2])
-    # print("Down:")
-    # print(w[3:n:2, 1 : m - 1 : 2])
-
-    print()
 
     # Lower left update
     w[2 : n - 1 : 2, 1 : m - 1 : 2] = (
@@ -219,17 +214,7 @@ def black_update(
             # Down
             + w[3:n:2, 1 : m - 1 : 2]
         )
-    ) / (Ip[1:k:2, 0:d:2] ** 2 + 4 * lam)
-
-    # print(w[1 : n - 1 : 2, 2 : m - 1 : 2])
-    # print("LHS:")
-    # print(w[1 : n - 1 : 2, 1 : m - 2 : 2])
-    # print("RHS:")
-    # print(w[1 : n - 1 : 2, 3:m:2])
-    # print("Up:")
-    # print(w[0 : n - 2 : 2, 2 : m - 1 : 2])
-    # print("Down:")
-    # print(w[2:n:2, 2 : m - 1 : 2])
+    ) / (Iw[1:k:2, 0:d:2] ** 2 + 4 * lam / h**2)
 
     # Upper right update
     w[1 : n - 1 : 2, 2 : m - 1 : 2] = (
@@ -247,7 +232,7 @@ def black_update(
             # Down
             + w[2:n:2, 2 : m - 1 : 2]
         )
-    ) / (Ip[0:k:2, 1:d:2] ** 2 + 4 * lam)
+    ) / (Iw[0:k:2, 1:d:2] ** 2 + 4 * lam / h**2)
 
 
 def red_update(
@@ -257,7 +242,7 @@ def red_update(
     Ip: np.ndarray,
     lam: float,
     rhs: np.ndarray,
-    h: int,
+    h: float,
 ) -> None:
     """
     Red update using Red-Black Gauss-Seidel
@@ -305,7 +290,7 @@ def red_update(
             # Down
             + w[2:n:2, 1 : m - 1 : 2]
         )
-    ) / (Ip[0:k:2, 0:d:2] ** 2 + 4 * lam)
+    ) / (Iw[0:k:2, 0:d:2] ** 2 + 4 * lam / h**2)
 
     # Interior corner update
     w[2 : n - 1 : 2, 2 : m - 1 : 2] = (
@@ -323,7 +308,7 @@ def red_update(
             # Down
             + w[3:n:2, 2 : m - 1 : 2]
         )
-    ) / (Ip[1:k:2, 1:d:2] ** 2 + 4 * lam)
+    ) / (Iw[1:k:2, 1:d:2] ** 2 + 4 * lam / h**2)
 
 
 def residual(
@@ -334,7 +319,7 @@ def residual(
     lam: float,
     rhs_u: np.ndarray,
     rhs_v: np.ndarray,
-    h: int,
+    h: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Calculate the residual of the system
@@ -363,36 +348,10 @@ def residual(
     tuple[np.ndarray, np.ndarray]
         Residual of u, v
     """
-    du = rhs_u - (Ix**2 * u + Iy * Ix * v - lam * laplacian(u, h))
-    dv = rhs_v - (Ix**2 * v + Iy * Ix * u - lam * laplacian(v, h))
+    fu, fv = F(u, v, Ix, Iy, lam, h)
+    du = rhs_u - fu
+    dv = rhs_v - fv
     return du, dv
-
-
-def laplacian(w: np.ndarray, h: int) -> np.ndarray:
-    """
-    Calculate the discret laplacian of w, with steplength h
-
-    Args:
-    ---
-    w : np.ndarray
-        w
-    h: int
-        Stepsize corresponding to the level
-
-    Returns:
-    ---
-    np.ndarray
-        Discret laplacian of w
-    """
-    w_pad = np.pad(w, 1)
-    n, m = w_pad.shape
-    return (
-        w_pad[0 : n - 2, 1 : m - 1]
-        + w_pad[2:n, 1 : m - 1]
-        + w_pad[1 : n - 1, 0 : m - 2]
-        + w_pad[1 : n - 1, 2:m]
-        - 4 * w_pad[1 : n - 1, 1 : m - 1]
-    ) / h**2
 
 
 def restriction(
@@ -479,6 +438,37 @@ def prolongation(eu_2h: np.ndarray, ev_2h: np.ndarray) -> tuple[np.ndarray, np.n
 
 
 def interpolate(e_2h: np.ndarray) -> np.ndarray:
+    """
+    Interpolation of error of coarse grid onto a fine grid
+
+    Args:
+    ---
+    e_2h : np.ndarray
+        Residual to interpolate
+
+    Returns:
+    ---
+    np.ndarray
+        Interpolated e_2h to e_h
+    """
+    n, m = e_2h.shape
+
+    e_h = np.zeros((2 * n, 2 * m))
+    k, d = e_h.shape
+
+    # Upper left
+    e_h[0 : k - 1 : 2, 0 : d - 1 : 2] = e_2h
+    # Lower left
+    e_h[1:k:2, 0 : d - 1 : 2] = e_2h
+    # Upper right
+    e_h[0 : k - 1 : 2, 1:d:2] = e_2h
+    # Lower right
+    e_h[1:k:2, 1:d:2] = e_2h
+
+    return e_h
+
+
+def interpolate_fancy(e_2h: np.ndarray) -> np.ndarray:
     """
     Interpolation of error of coarse grid onto a fine grid
 
