@@ -129,7 +129,7 @@ def cg(
     rhs_v: np.ndarray,
     tol=1.0e-8,
     maxitr=2000,
-    h: int = 1,
+    h: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     The CG method for the optical flow problem.
@@ -154,7 +154,7 @@ def cg(
         relative residual tolerance
     maxitr : np.ndarray, default=2000
         maximum number of iterations
-    h : int, default= 1
+    h : float, default= 1
         Steplength
 
     Returns:

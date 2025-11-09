@@ -44,6 +44,8 @@ def preprocessing(
     # I0 = cv2.resize(I0, (2**k, 2**k))
     # I1 = cv2.resize(I1, (2**k, 2**k))
     print("I0: ", I0.shape)
+    I0 = np.astype(I0, np.float64)
+    I1 = np.astype(I1, np.float64)
 
     # Initialize result vectors
     I0x = np.zeros_like(I0)
@@ -76,10 +78,10 @@ def preprocessing(
     rhsv = -It * Iy
 
     # Plotting
-    plt.imshow(I0)
-    plt.show()
-    plt.imshow(I1)
-    plt.show()
+    # plt.imshow(I0)
+    # plt.show()
+    # plt.imshow(I1)
+    # plt.show()
 
     return (
         Ix,

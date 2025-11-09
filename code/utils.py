@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def laplacian(w: np.ndarray, h: int) -> np.ndarray:
+def laplacian(w: np.ndarray, h: float) -> np.ndarray:
     """
     Calculate the discret laplacian of w, with steplength h
 
@@ -9,7 +9,7 @@ def laplacian(w: np.ndarray, h: int) -> np.ndarray:
     ---
     w : np.ndarray
         w
-    h: int
+    h: float
         Stepsize corresponding to the level
 
     Returns:
@@ -34,7 +34,7 @@ def F(
     Ix: np.ndarray,
     Iy: np.ndarray,
     lam: float,
-    h: int,
+    h: float,
 ) -> tuple[np.ndarray, np.ndarray]:
     Fu = Ix**2 * u + Iy * Ix * v - lam * laplacian(u, h)
     Fv = Iy**2 * v + Iy * Ix * u - lam * laplacian(v, h)
