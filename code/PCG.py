@@ -11,15 +11,13 @@ def pcg(
     lam: float,
     rhs_u: np.ndarray,
     rhs_v: np.ndarray,
+    s1=2,
+    s2=2,
+    max_level=2,
     tol=1.0e-8,
     maxitr=2000,
-    h: int = 1,
+    h: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
-    # V_cycle consts:
-    s1 = 2
-    s2 = 2
-    max_level = 3
-
     # Initialize
     Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
     ru = rhs_u - Fu
@@ -34,8 +32,21 @@ def pcg(
     assert ru.shape == rv.shape
 
     # M*z0 = r0
+    # zu, zv = cg(
+    #     np.zeros_like(ru), np.zeros_like(rv), Ix, Iy, lam, ru, rv, 1e-8, 3, h
+    # )
     zu, zv = V_cycle(
-        np.zeros_like(ru), np.zeros_like(rv), Ix, Iy, lam, ru, rv, s1, s2, h, max_level
+        ru,
+        rv,
+        Ix,
+        Iy,
+        lam,
+        ru,
+        rv,
+        s1,
+        s2,
+        level=1,
+        max_level=max_level,
     )
     pu = zu
     pv = zv
@@ -63,11 +74,15 @@ def pcg(
 
         # Break condition
         r = norm(ru, rv)
+        print("Residual: ", r / r0)
         if r / r0 < tol:
             break
 
         # Solve Mz=r
-        zu, zv = V_cycle(zu, zv, Ix, Iy, lam, ru, rv, s1, s2, h, max_level)
+        zu, zv = V_cycle(
+            zu, zv, Ix, Iy, lam, ru, rv, s1, s2, level=1, max_level=max_level
+        )
+        # zu, zv = cg(zu, zv, Ix, Iy, lam, ru, rv, 1e-8, 3, h)
 
         rk1_zk1 = np.sum(ru * zu) + np.sum(rv * zv)
         beta = rk1_zk1 / rk_zk
@@ -76,4 +91,3 @@ def pcg(
         pv = zv + beta * pv
 
     return u, v
-
