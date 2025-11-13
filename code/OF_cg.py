@@ -47,7 +47,8 @@ def OF_cg(
     # m = m - 2
     h = level
     k1 = (4 * reg) / (h * h)
-    k2 = -reg / (h * h)
+    k2 = -reg / (h * h) 
+    res_ratios = []
 
     # Note: Implicitly imposing Dirichlet B.C. by only acting on interior nodes (n-2, m-2) and settung u0 = v0 = 0
     # Ix = Ix[1:-1, 1:-1]
@@ -84,7 +85,7 @@ def OF_cg(
     A_12 = sp.diags(Ixy.ravel())
     A_21 = A_12.copy()
 
-    A = sp.block_array([[A_11, A_12], [A_21, A_22]])
+    A = sp.block_array([[A_11, A_12], [A_21, A_22]]).tocsr()
 
     # plt.spy(A_11, markersize=0.8, color = "black")
     # plt.show()
@@ -105,6 +106,7 @@ def OF_cg(
         p = r_new + beta * p
         r_old = r_new
         iter += 1
+        res_ratios.append(np.linalg.norm(r_old) / np.linalg.norm(r0))
 
         if (np.linalg.norm(r_old) / np.linalg.norm(r0) < tol) or (iter >= maxit):
             break
@@ -116,7 +118,7 @@ def OF_cg(
     v = x[(n * m) :].reshape((n, m))
     # print(np.max(Ix**2), 4*reg/(h*h))
 
-    return u, v
+    return u, v, res_ratios
 
 
 def cg(
@@ -165,6 +167,8 @@ def cg(
     # Initialize
     Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
 
+    res_ratios = []                         # For experiments
+
     # r
     ru = rhs_u - Fu
     rv = rhs_v - Fv
@@ -201,6 +205,9 @@ def cg(
         # Break condition
         rk1_rk1 = norm(ru, rv) ** 2
         # 'tol' raised to power of 2 as we are dealing with norm squared
+
+        res_ratios.append(rk1_rk1/rr0)
+
         if rk1_rk1 / rr0 < tol**2:
             break
 
@@ -209,4 +216,4 @@ def cg(
         pu = ru + beta * pu
         pv = rv + beta * pv
 
-    return u, v
+    return [u, v, res_ratios]

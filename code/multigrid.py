@@ -56,18 +56,20 @@ def V_cycle(
     ru_h, rv_h = residual(u, v, Ix, Iy, lam, rhs_u, rhs_v, h)
     ru_2h, rv_2h, Ix2h, Iy2h = restriction(ru_h, rv_h, Ix, Iy)
     if level == max_level:
-        eu_2h, ev_2h = cg(
-            np.zeros_like(ru_2h),
-            np.zeros_like(rv_2h),
-            Ix2h,
-            Iy2h,
-            lam,
-            ru_2h,
-            rv_2h,
-            1e-8,
-            1000,
-            2 * h,
-        )
+        cg_res =  cg(
+                    np.zeros_like(ru_2h),
+                    np.zeros_like(rv_2h),
+                    Ix2h,
+                    Iy2h,
+                    lam,
+                    ru_2h,
+                    rv_2h,
+                    1e-8,
+                    1000,
+                    2 * h,
+                )
+        
+        eu_2h, ev_2h = cg_res[0], cg_res[1]
     else:
         eu_2h, ev_2h = V_cycle(
             np.zeros_like(ru_2h),
