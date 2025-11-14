@@ -14,7 +14,7 @@ def OF_cg(
     rhsu: np.ndarray,
     rhsv: np.ndarray,
     tol=1.0e-8,
-    maxit=2000,
+    maxit=4000,
     level: int = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -130,7 +130,7 @@ def cg(
     rhs_u: np.ndarray,
     rhs_v: np.ndarray,
     tol=1.0e-8,
-    maxitr=2000,
+    maxitr=4000,
     h: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
@@ -206,7 +206,7 @@ def cg(
         rk1_rk1 = norm(ru, rv) ** 2
         # 'tol' raised to power of 2 as we are dealing with norm squared
 
-        res_ratios.append(rk1_rk1/rr0)
+        res_ratios.append(np.linalg.norm(rk1_rk1)/np.linalg.norm(rr0))
 
         if rk1_rk1 / rr0 < tol**2:
             break

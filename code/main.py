@@ -25,10 +25,12 @@ def main():
     print("rhsu: ", rhsu.shape)
     print("rhsv: ", rhsv.shape)
 
+
     n, m = Ix.shape
 
     # Call OF_cg to numerically solve for u anv using the CG-method.
     x, y = np.zeros((n, m)), np.zeros((n, m))
+
 
     # start = perf_counter()
     # u, v = OF_cg(x, y, Ix, Iy, 1, rhsu, rhsv)
@@ -45,12 +47,14 @@ def main():
     end = perf_counter()
     print("Time: ", end - start)
 
-    u, v = V_cycle(x, y, Ix, Iy, 1, rhsu, rhsv, s1=1, s2=1, level=1, max_level=2)
+
+    #vcyc_res = V_cycle(x, y, Ix, Iy, 1, rhsu, rhsv, s1=1, s2=1, level=1, max_level=2)
+    #u, v = vcyc_res[0], vcyc_res[1]
 
     # Plotting
-    result = mycomputeColor(u, v)
-    plt.imshow(result)
-    plt.show()
+    #result = mycomputeColor(u, v)
+    #plt.imshow(result)
+    #plt.show()
 
     
     # Experiment

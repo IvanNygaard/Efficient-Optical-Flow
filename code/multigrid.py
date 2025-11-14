@@ -56,6 +56,9 @@ def V_cycle(
     ru_h, rv_h = residual(u, v, Ix, Iy, lam, rhs_u, rhs_v, h)
     ru_2h, rv_2h, Ix2h, Iy2h = restriction(ru_h, rv_h, Ix, Iy)
     if level == max_level:
+
+        res_ratio_vals = []
+
         cg_res =  cg(
                     np.zeros_like(ru_2h),
                     np.zeros_like(rv_2h),
@@ -70,26 +73,30 @@ def V_cycle(
                 )
         
         eu_2h, ev_2h = cg_res[0], cg_res[1]
+        res_ratio_vals.append(cg_res[2])
     else:
-        eu_2h, ev_2h = V_cycle(
-            np.zeros_like(ru_2h),
-            np.zeros_like(rv_2h),
-            Ix2h,
-            Iy2h,
-            lam,
-            ru_2h,
-            rv_2h,
-            s1,
-            s2,
-            level + 1,
-            max_level,
-        )
+        eu_2h, ev_2h, res_ratio_vals = V_cycle(
+                                            np.zeros_like(ru_2h),
+                                            np.zeros_like(rv_2h),
+                                            Ix2h,
+                                            Iy2h,
+                                            lam,
+                                            ru_2h,
+                                            rv_2h,
+                                            s1,
+                                            s2,
+                                            level + 1,
+                                            max_level,
+                                        )
+
+
+
     eu_h, ev_h = prolongation(eu_2h, ev_2h)
     u = u + eu_h
     v = v + ev_h
     u, v = smoothing(u, v, Ix, Iy, lam, rhs_u, rhs_v, s2, h)
 
-    return u, v
+    return [u, v, res_ratio_vals]
 
 
 def smoothing(
