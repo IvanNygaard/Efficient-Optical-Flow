@@ -15,7 +15,7 @@ def OF_cg(
     rhsv: np.ndarray,
     tol=1.0e-8,
     maxit=2000,
-    level: int = 1,
+    level: int = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     The CG method for the optical flow problem.
@@ -45,7 +45,7 @@ def OF_cg(
     n, m = Ix.shape
     # n = n - 2
     # m = m - 2
-    h = level
+    h = float(2**level)
     k1 = (4 * reg) / (h * h)
     k2 = -reg / (h * h)
 
@@ -166,14 +166,14 @@ def cg(
     Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
 
     # r
-    ru = rhs_u - Fu
-    rv = rhs_v - Fv
+    ru = np.copy(rhs_u - Fu)
+    rv = np.copy(rhs_v - Fv)
     # x
-    u = u0
-    v = v0
+    u = np.copy(u0)
+    v = np.copy(v0)
     # p
-    pu = ru
-    pv = rv
+    pu = np.copy(ru)
+    pv = np.copy(rv)
 
     # Calculate the norm of r
     rr0 = norm(ru, rv) ** 2
@@ -192,21 +192,26 @@ def cg(
 
         alpha = rk_rk / pAp
 
-        u = u + alpha * pu
-        v = v + alpha * pv
+        u = np.copy(u + alpha * pu)
+        v = np.copy(v + alpha * pv)
 
-        ru = ru - alpha * Fpu
-        rv = rv - alpha * Fpv
+        ru = np.copy(ru - alpha * Fpu)
+        rv = np.copy(rv - alpha * Fpv)
 
         # Break condition
         rk1_rk1 = norm(ru, rv) ** 2
         # 'tol' raised to power of 2 as we are dealing with norm squared
         if rk1_rk1 / rr0 < tol**2:
             break
+        # TESTING
+        Fu, Fv = F(u, v, Ix, Iy, lam, h)
+        # print("Est. Residual (Norm): ", np.sqrt(rk1_rk1))
+        # print("Residual (Norm): ", norm(rhs_u - Fu, rhs_v - Fv))
 
         beta = rk1_rk1 / rk_rk
 
-        pu = ru + beta * pu
-        pv = rv + beta * pv
+        pu = np.copy(ru + beta * pu)
+        pv = np.copy(rv + beta * pv)
 
+    print("Itr: ", it)
     return u, v

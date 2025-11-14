@@ -1,6 +1,6 @@
 import numpy as np
 from utils import norm, F
-from multigrid import V_cycle
+from multigrid import V_cycle, smoothing
 
 
 def pcg(
@@ -11,8 +11,8 @@ def pcg(
     lam: float,
     rhs_u: np.ndarray,
     rhs_v: np.ndarray,
-    s1=2,
-    s2=2,
+    s1=1,
+    s2=1,
     max_level=2,
     tol=1.0e-8,
     maxitr=2000,
@@ -22,12 +22,16 @@ def pcg(
     Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
     ru = rhs_u - Fu
     rv = rhs_v - Fv
-    u = u0
-    v = v0
+
+    print("ru: ", ru)
+    print("rv: ", rv)
+    u = np.copy(u0)
+    v = np.copy(v0)
 
     # Calculate the norm
     r0 = norm(ru, rv)
     r = r0  # To be updated in the iterations
+    print("r0: ", r0)
 
     assert ru.shape == rv.shape
 
@@ -36,8 +40,8 @@ def pcg(
     #     np.zeros_like(ru), np.zeros_like(rv), Ix, Iy, lam, ru, rv, 1e-8, 3, h
     # )
     zu, zv = V_cycle(
-        ru,
-        rv,
+        np.zeros_like(ru),
+        np.zeros_like(rv),
         Ix,
         Iy,
         lam,
@@ -45,11 +49,11 @@ def pcg(
         rv,
         s1,
         s2,
-        level=1,
+        level=0,
         max_level=max_level,
     )
-    pu = zu
-    pv = zv
+    pu = np.copy(zu)
+    pv = np.copy(zv)
 
     # Define it here so the iterations work
     rk1_zk1 = np.sum(ru * zu) + np.sum(rv * zv)
@@ -80,10 +84,11 @@ def pcg(
 
         # Solve Mz=r
         zu, zv = V_cycle(
-            zu, zv, Ix, Iy, lam, ru, rv, s1, s2, level=1, max_level=max_level
+            zu, zv, Ix, Iy, lam, ru, rv, s1, s2, level=0, max_level=max_level
         )
         # zu, zv = cg(zu, zv, Ix, Iy, lam, ru, rv, 1e-8, 3, h)
 
+        assert ru.shape == zu.shape
         rk1_zk1 = np.sum(ru * zu) + np.sum(rv * zv)
         beta = rk1_zk1 / rk_zk
 

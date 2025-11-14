@@ -31,6 +31,7 @@ def preprocessing(
     """
     h = dx  # Uniform in x and y
 
+    print(plt.imread("../reference_frames/frame10.png", "png"))
     # Reading, smoothing and scaling of images
     I0 = sci.ndimage.gaussian_filter(
         plt.imread("../reference_frames/frame10.png", "png"), sigma

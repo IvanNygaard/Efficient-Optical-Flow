@@ -36,8 +36,9 @@ def F(
     lam: float,
     h: float,
 ) -> tuple[np.ndarray, np.ndarray]:
-    Fu = Ix**2 * u + Iy * Ix * v - lam * laplacian(u, h)
-    Fv = Iy**2 * v + Iy * Ix * u - lam * laplacian(v, h)
+    Ixy = Ix*Iy
+    Fu = Ix**2 * u + Ixy * v - lam * laplacian(u, h)
+    Fv = Iy**2 * v + Ixy * u - lam * laplacian(v, h)
     return Fu, Fv
 
 

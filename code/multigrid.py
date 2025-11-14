@@ -1,5 +1,5 @@
 import numpy as np
-from OF_cg import cg
+from OF_cg import cg, OF_cg
 from utils import F
 
 
@@ -50,12 +50,13 @@ def V_cycle(
         Numerical solution for u, v
     """
     # Stepsize
-    h = float(level)
+    h = float(2**level)
 
+    u0, v0 = np.copy(u0), np.copy(v0)
     u, v = smoothing(u0, v0, Ix, Iy, lam, rhs_u, rhs_v, s1, h)
     ru_h, rv_h = residual(u, v, Ix, Iy, lam, rhs_u, rhs_v, h)
     ru_2h, rv_2h, Ix2h, Iy2h = restriction(ru_h, rv_h, Ix, Iy)
-    if level == max_level:
+    if level == max_level - 1:
         eu_2h, ev_2h = cg(
             np.zeros_like(ru_2h),
             np.zeros_like(rv_2h),
@@ -66,7 +67,7 @@ def V_cycle(
             rv_2h,
             1e-8,
             1000,
-            2 * h,
+            level+1,
         )
     else:
         eu_2h, ev_2h = V_cycle(
@@ -150,11 +151,11 @@ def smoothing(
 
         # For symmetric GS
 
-        black_update(v_pad, u_pad, Iy, Ix, lam, rhsv, h)
         red_update(u_pad, v_pad, Ix, Iy, lam, rhsu, h)
+        black_update(v_pad, u_pad, Iy, Ix, lam, rhsv, h)
 
-        black_update(u_pad, v_pad, Ix, Iy, lam, rhsu, h)
         red_update(v_pad, u_pad, Iy, Ix, lam, rhsv, h)
+        black_update(u_pad, v_pad, Ix, Iy, lam, rhsu, h)
 
     return u_pad[1 : n - 1, 1 : m - 1], v_pad[1 : n - 1, 1 : m - 1]
 
