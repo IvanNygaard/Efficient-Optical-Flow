@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from multigrid import V_cycle
 from time import perf_counter
+from run_numerical_experiments import run_numerical_experiments
 
 
 def main():
@@ -24,10 +25,12 @@ def main():
     print("rhsu: ", rhsu.shape)
     print("rhsv: ", rhsv.shape)
 
+
     n, m = Ix.shape
 
     # Call OF_cg to numerically solve for u anv using the CG-method.
     x, y = np.zeros((n, m)), np.zeros((n, m))
+
 
     # start = perf_counter()
     # u, v = OF_cg(x, y, Ix, Iy, 1, rhsu, rhsv)
@@ -39,16 +42,24 @@ def main():
     # plt.show()
 
     start = perf_counter()
-    u_cg, v_cg = cg(x, y, Ix, Iy, 1, rhsu, rhsv)
+    cg_res = cg(x, y, Ix, Iy, 1, rhsu, rhsv)
+    u_cg, v_cg = cg_res[0], cg_res[1]
     end = perf_counter()
     print("Time: ", end - start)
 
-    u, v = V_cycle(x, y, Ix, Iy, 1, rhsu, rhsv, s1=1, s2=1, level=1, max_level=2)
+
+    #vcyc_res = V_cycle(x, y, Ix, Iy, 1, rhsu, rhsv, s1=1, s2=1, level=1, max_level=2)
+    #u, v = vcyc_res[0], vcyc_res[1]
 
     # Plotting
-    result = mycomputeColor(u, v)
-    plt.imshow(result)
-    plt.show()
+    #result = mycomputeColor(u, v)
+    #plt.imshow(result)
+    #plt.show()
+
+    
+    # Experiment
+    run_numerical_experiments(1,1,1,1)
+
 
 
 main()

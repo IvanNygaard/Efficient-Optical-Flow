@@ -14,9 +14,9 @@ def OF_cg(
     rhsu: np.ndarray,
     rhsv: np.ndarray,
     tol=1.0e-8,
-    maxit=2000,
+    maxit=4000,
     level: int = 0,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, list[float]]:
     """
     The CG method for the optical flow problem.
 
@@ -31,14 +31,11 @@ def OF_cg(
     rhsv - right-hand side in the equation for v
     tol - relative residual tolerance
     maxit - maximum number of iterations
-    output:
-    u - numerical solution for u
-    v - numerical solution for v
 
     Returns:
     ---
-     tuple[np.ndarray, np.ndarray]
-        Numerical solution for u, v
+     tuple[np.ndarray, np.ndarray, list[float]]
+        Numerical solution for u, v, and list of residuals
     """
 
     # Dimensions, step-size, constants for diagonal (k1) and off-diagonal (k2) elements and cross derivatives
@@ -48,6 +45,7 @@ def OF_cg(
     h = float(2**level)
     k1 = (4 * reg) / (h * h)
     k2 = -reg / (h * h)
+    res_ratios = []
 
     # Note: Implicitly imposing Dirichlet B.C. by only acting on interior nodes (n-2, m-2) and settung u0 = v0 = 0
     # Ix = Ix[1:-1, 1:-1]
@@ -84,7 +82,7 @@ def OF_cg(
     A_12 = sp.diags(Ixy.ravel())
     A_21 = A_12.copy()
 
-    A = sp.block_array([[A_11, A_12], [A_21, A_22]])
+    A = sp.block_array([[A_11, A_12], [A_21, A_22]]).tocsr()
 
     # plt.spy(A_11, markersize=0.8, color = "black")
     # plt.show()
@@ -105,6 +103,7 @@ def OF_cg(
         p = r_new + beta * p
         r_old = r_new
         iter += 1
+        res_ratios.append(np.linalg.norm(r_old) / np.linalg.norm(r0))
 
         if (np.linalg.norm(r_old) / np.linalg.norm(r0) < tol) or (iter >= maxit):
             break
@@ -116,7 +115,7 @@ def OF_cg(
     v = x[(n * m) :].reshape((n, m))
     # print(np.max(Ix**2), 4*reg/(h*h))
 
-    return u, v
+    return u, v, res_ratios
 
 
 def cg(
@@ -128,42 +127,44 @@ def cg(
     rhs_u: np.ndarray,
     rhs_v: np.ndarray,
     tol=1.0e-8,
-    maxitr=2000,
+    maxitr=4000,
     h: float = 1,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, list[float]]:
     """
     The CG method for the optical flow problem.
 
     Args:
     ---
     u0 : np.ndarray
-        initial guess for u
+        Initial guess for u
     v0 : np.ndarray
-        initial guess for v
+        Initial guess for v
     Ix : np.ndarray
         x-derivative of the first frame
     Iy : np.ndarray
         y-derivative of the first frame
     lam : float
-        regularisation parameter lambda
+        Regularisation parameter lambda
     rhs_u : np.ndarray
-        right-hand side in the equation for u
+        Right-hand side in the equation for u
     rhs_v : np.ndarray
-        right-hand side in the equation for v
+        Right-hand side in the equation for v
     tol : np.ndarray, default=1e-8
-        relative residual tolerance
-    maxitr : np.ndarray, default=2000
-        maximum number of iterations
-    h : float, default= 1
+        Relative residual tolerance
+    maxitr : np.ndarray, default=4000
+        Maximum number of iterations
+    h : float, default=1
         Steplength
 
     Returns:
     ---
-     tuple[np.ndarray, np.ndarray]
-        Numerical solution for u, v
+     tuple[np.ndarray, np.ndarray, list[float]]
+        Numerical solution for u, v, and list of residuals
     """
     # Initialize
     Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
+
+    res_ratios = []  # For experiments
 
     # r
     ru = np.copy(rhs_u - Fu)
@@ -201,6 +202,9 @@ def cg(
         # Break condition
         rk1_rk1 = norm(ru, rv) ** 2
         # 'tol' raised to power of 2 as we are dealing with norm squared
+
+        res_ratios.append(np.linalg.norm(rk1_rk1) / np.linalg.norm(rr0))
+
         if rk1_rk1 / rr0 < tol**2:
             break
         # TESTING
@@ -214,4 +218,4 @@ def cg(
         pv = np.copy(rv + beta * pv)
 
     print("Itr: ", it)
-    return u, v
+    return u, v, res_ratios

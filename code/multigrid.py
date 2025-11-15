@@ -15,7 +15,7 @@ def V_cycle(
     s2: int,
     level: int,
     max_level: int,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, list[float]]:
     """
     V-cycle for the optical flow problem
 
@@ -46,8 +46,8 @@ def V_cycle(
 
     Returns:
     ---
-    tuple[np.ndarray, np.ndarray]
-        Numerical solution for u, v
+    tuple[np.ndarray, np.ndarray, list[float]]
+        Numerical solution for u, v, and list of residuals from CG
     """
     # Stepsize
     h = float(2**level)
@@ -57,7 +57,7 @@ def V_cycle(
     ru_h, rv_h = residual(u, v, Ix, Iy, lam, rhs_u, rhs_v, h)
     ru_2h, rv_2h, Ix2h, Iy2h = restriction(ru_h, rv_h, Ix, Iy)
     if level == max_level - 1:
-        eu_2h, ev_2h = cg(
+        eu_2h, ev_2h, res_ratio_vals = cg(
             np.zeros_like(ru_2h),
             np.zeros_like(rv_2h),
             Ix2h,
@@ -67,10 +67,10 @@ def V_cycle(
             rv_2h,
             1e-8,
             1000,
-            level+1,
+            2 * h,
         )
     else:
-        eu_2h, ev_2h = V_cycle(
+        eu_2h, ev_2h, res_ratio_vals = V_cycle(
             np.zeros_like(ru_2h),
             np.zeros_like(rv_2h),
             Ix2h,
@@ -83,12 +83,13 @@ def V_cycle(
             level + 1,
             max_level,
         )
+
     eu_h, ev_h = prolongation(eu_2h, ev_2h)
     u = u + eu_h
     v = v + ev_h
     u, v = smoothing(u, v, Ix, Iy, lam, rhs_u, rhs_v, s2, h)
 
-    return u, v
+    return u, v, res_ratio_vals
 
 
 def smoothing(
