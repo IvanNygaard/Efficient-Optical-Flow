@@ -94,6 +94,7 @@ def OF_cg(
     r_old = r0.copy()
     p = r_old.copy()
 
+
     while True:
         alpha = (r_old.T @ r_old) / ((A @ p).T @ p)
         x += alpha * p
@@ -221,5 +222,5 @@ def cg(
         # Increase iteration counter
         it += 1
 
-    print("Itr: ", it)
+    #print("Itr: ", it)
     return u, v, relative_residuals_arr[:it]
