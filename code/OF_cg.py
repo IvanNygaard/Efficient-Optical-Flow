@@ -37,7 +37,6 @@ def OF_cg(
      tuple[np.ndarray, np.ndarray, list[float]]
         Numerical solution for u, v, and list of residuals
     """
-
     # Dimensions, step-size, constants for diagonal (k1) and off-diagonal (k2) elements and cross derivatives
     n, m = Ix.shape
     # n = n - 2
@@ -129,7 +128,7 @@ def cg(
     tol=1.0e-8,
     maxitr=4000,
     h: float = 1,
-) -> tuple[np.ndarray, np.ndarray, list[float]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     The CG method for the optical flow problem.
 
@@ -161,10 +160,11 @@ def cg(
      tuple[np.ndarray, np.ndarray, list[float]]
         Numerical solution for u, v, and list of residuals
     """
+    # Residuals (For experiments)
+    relative_residuals_arr = np.zeros(maxitr)
+
     # Initialize
     Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
-
-    res_ratios = []  # For experiments
 
     # r
     ru = np.copy(rhs_u - Fu)
@@ -184,8 +184,6 @@ def cg(
 
     it = 0
     while it < maxitr:
-        it += 1
-
         # Calculate alpha
         rk_rk = rk1_rk1
         Fpu, Fpv = F(pu, pv, Ix, Iy, lam, h)
@@ -203,12 +201,15 @@ def cg(
         rk1_rk1 = norm(ru, rv) ** 2
         # 'tol' raised to power of 2 as we are dealing with norm squared
 
-        res_ratios.append(np.linalg.norm(rk1_rk1) / np.linalg.norm(rr0))
+        # Store the residuals
+        relative_residuals_arr[it] = np.sqrt(rk1_rk1) / rr0
 
         if rk1_rk1 / rr0 < tol**2:
+            # So we index the residuals correctly afterwards
+            it += 1
             break
         # TESTING
-        Fu, Fv = F(u, v, Ix, Iy, lam, h)
+        # Fu, Fv = F(u, v, Ix, Iy, lam, h)
         # print("Est. Residual (Norm): ", np.sqrt(rk1_rk1))
         # print("Residual (Norm): ", norm(rhs_u - Fu, rhs_v - Fv))
 
@@ -217,5 +218,8 @@ def cg(
         pu = np.copy(ru + beta * pu)
         pv = np.copy(rv + beta * pv)
 
+        # Increase iteration counter
+        it += 1
+
     print("Itr: ", it)
-    return u, v, res_ratios
+    return u, v, relative_residuals_arr[:it]
