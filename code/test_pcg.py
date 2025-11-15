@@ -20,7 +20,7 @@ def test_pcg():
     """
 
     # Unpack data from preprocessing (spatial derivatives, temporal derivatives, etc.)
-    Ix, Iy, It, rhsu, rhsv, h = preprocessing(1, 1, 1, 1, 1)
+    Ix, Iy, It, rhsu, rhsv, h = preprocessing(2, 1, 1, 1, 1)
     print("Ix: ", Ix.shape)
     print("Iy: ", Iy.shape)
     print("rhsu: ", rhsu.shape)
@@ -46,7 +46,7 @@ def test_pcg():
     # print("Time: ", end - start)
 
     start = perf_counter()
-    u, v = pcg(x, y, Ix, Iy, lam, rhsu, rhsv, s1=50, s2=50, tol=1e-8)
+    u, v = pcg(x, y, Ix, Iy, lam, rhsu, rhsv, s1=10, s2=10, max_level=5, tol=1e-8)
     end = perf_counter()
     print("Time: ", end - start)
 

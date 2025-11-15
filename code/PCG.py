@@ -13,15 +13,15 @@ def pcg(
     rhs_v: np.ndarray,
     s1=1,
     s2=1,
-    max_level=2,
+    max_level=4,
     tol=1.0e-8,
     maxitr=2000,
     h: float = 1,
 ) -> tuple[np.ndarray, np.ndarray]:
     # Initialize
     Fu, Fv = F(u0, v0, Ix, Iy, lam, h)
-    ru = rhs_u - Fu
-    rv = rhs_v - Fv
+    ru = np.copy(rhs_u - Fu)
+    rv = np.copy(rhs_v - Fv)
 
     print("ru: ", ru)
     print("rv: ", rv)
@@ -70,21 +70,22 @@ def pcg(
 
         alpha = rk_zk / pAp
 
-        u = u + alpha * pu
-        v = v + alpha * pv
+        u = np.copy(u + alpha * pu)
+        v = np.copy(v + alpha * pv)
 
-        ru = ru - alpha * Fpu
-        rv = rv - alpha * Fpv
+        ru = np.copy(ru - alpha * Fpu)
+        rv = np.copy(rv - alpha * Fpv)
 
         # Break condition
         r = norm(ru, rv)
-        print("Residual: ", r / r0)
+        print("Residual: ", r)
+        print("Rel Residual: ", r / r0)
         if r / r0 < tol:
             break
 
         # Solve Mz=r
         zu, zv = V_cycle(
-            zu, zv, Ix, Iy, lam, ru, rv, s1, s2, level=0, max_level=max_level
+            np.zeros_like(zu), np.zeros_like(zv), Ix, Iy, lam, ru, rv, s1, s2, level=0, max_level=max_level
         )
         # zu, zv = cg(zu, zv, Ix, Iy, lam, ru, rv, 1e-8, 3, h)
 
@@ -92,7 +93,7 @@ def pcg(
         rk1_zk1 = np.sum(ru * zu) + np.sum(rv * zv)
         beta = rk1_zk1 / rk_zk
 
-        pu = zu + beta * pu
-        pv = zv + beta * pv
+        pu = np.copy(zu + beta * pu)
+        pv = np.copy(zv + beta * pv)
 
     return u, v
