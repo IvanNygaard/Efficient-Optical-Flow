@@ -1,5 +1,5 @@
 # Imports
-from preprocessing import preprocessing
+from preprocessing import preprocessing_image
 from OF_cg import cg
 from helper_functions import mycomputeColor
 import numpy as np
@@ -20,7 +20,7 @@ def test_MG():
     """
 
     # Unpack data from preprocessing (spatial derivatives, temporal derivatives, etc.)
-    Ix, Iy, It, rhsu, rhsv, h = preprocessing(2, 1, 1, 1, 1)
+    Ix, Iy, It, rhsu, rhsv, h = preprocessing_image(2, 1, 1, 1)
     print("Ix: ", Ix.shape)
     print("Iy: ", Iy.shape)
     print("rhsu: ", rhsu.shape)
