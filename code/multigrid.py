@@ -68,7 +68,7 @@ def V_cycle(
             rv_2h,
             1e-8,
             1000,
-            h,
+            h,  # Why h and not 2h?
         )
     else:
         eu_2h, ev_2h = V_cycle(
